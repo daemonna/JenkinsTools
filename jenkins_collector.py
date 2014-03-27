@@ -22,8 +22,9 @@ class jenkins_job:
     failure = ""
     view = ""
 
+
 # server values
-server_ip = "192.168.100.100"  #localhost as default if no IP specified
+server_ip = "10.200.10.149"  #localhost as default if no IP specified
 server_port = "8080"
 USER="extERNIDuc"
 PASSWORD="3ODiskKC"
@@ -47,20 +48,22 @@ fa = ET.Element('failure')
 def list_views():
     print("collecting View information from ", server_ip)
 
-    
-    restcall = requests.get('http://{0}:{1}/api/xml?xpath=count(/hudson/view[*])'.format(server_ip, server_port), auth=HTTPBasicAuth(USER, PASSWORD))  #first call with timeout
+
+    restcall = requests.get('http://{0}:{1}/api/xml?xpath=string(count(/hudson/view[*]))&wrapper=hudson'.format(server_ip, server_port))  #first call with timeout
     print("REQ: {0}".format(restcall.status_code))
     if restcall.status_code == 403:
         print("Connection error...")
+        exit(403)
 
-    viewCount = int(float(restcall.text))
+    root = ET.fromstring(restcall.text)
+    viewCount = int(root.text)
     print("found {0} Views".format(viewCount))
 
     i = 1
     while viewCount >= i:
         restcall = requests.get('http://{0}:{1}/api/xml?xpath=/hudson/view[{2}]/name'.format(server_ip, server_port, i))
         root = ET.fromstring(restcall.text)
-        print("[ {0} ]".format(root.text))
+        print("[view num {0} is {1} ]".format(i, root.text))
         #viewList.insert(i, root.text)
         list_jobs(root.text)
         i += 1
