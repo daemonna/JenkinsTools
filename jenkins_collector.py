@@ -21,6 +21,7 @@ class jenkins_job:
     result = ""
     failure = ""
     view = ""
+    view_idx = ""
 
 
 # server values
@@ -31,10 +32,10 @@ USER=""
 PASSWORD=""
 
 # job/view values
-viewCount = 0
-jobCount = 0
 job_array = []
+view_array = []
 view_from_cli = "n/a"
+
 
 # XML elements for xUnit
 root = ET.Element('testsuites')
@@ -65,15 +66,16 @@ def list_views():
         restcall = requests.get('http://{0}:{1}/api/xml?xpath=/hudson/view[{2}]/name'.format(server_ip, server_port, i))
         root = ET.fromstring(restcall.text)
         print("[view num {0} is {1} ]".format(i, root.text))
-        #viewList.insert(i, root.text)
-        list_jobs(root.text)
+        view_array.append(root.text)
+        list_jobs(root.text, i)
         i += 1
+
 
 
 #########################
 # list jobs in view     #
 #########################
-def list_jobs(view_id):
+def list_jobs(view_id, view_idx):
     print("listing jobs for {0}".format(view_id))
     restcall = requests.get('http://{0}:{1}/view/{2}/api/xml?xpath=string(count(/*/job[*]))&wrapper=hudson'.format(server_ip, server_port, view_id))
     root = ET.fromstring(restcall.text)
@@ -85,11 +87,11 @@ def list_jobs(view_id):
         root = ET.fromstring(restcall.text)
         print("             [ {0} ]".format(root.text))
 
-        #jobList.insert(i, root.text)
-
         newjob = jenkins_job()
         if view_id != "All":
             newjob.view = view_id
+            newjob.view_idx = view_idx
+            print("               View_idx: {0}".format(view_idx))
             newjob.name = root.text
             newjob.result = get_job_result(newjob.name)
             newjob.duration = get_job_duration(newjob.name)
@@ -98,9 +100,6 @@ def list_jobs(view_id):
             job_array.append(newjob)
         else:
             print("skiping coz belongs to ALL")
-
-        #print("job {0} and status {1}".format(newjob.name, newjob.result))
-
         i += 1
 
 
@@ -132,6 +131,9 @@ def get_job_url(jobname):
     return root.text
 
 
+#############################################
+# write all output to xunit compatible xml  #
+#############################################
 
 def CDATA(text=None):
     element = ET.Element('![CDATA[')
@@ -147,17 +149,9 @@ def _serialize_xml(write, elem, qnames, namespaces):
 ET._serialize_xml = ET._serialize['xml'] = _serialize_xml
 
 
-
-#############################################
-# write all output to xunit compatible xml  #
-#############################################
-def xunit_write_view(view_name):   #SubElement(body, 'outline', {'text':group_name})
-    print("writing view data to xml")
-    # Configure one attribute with set()
-
-    FAIL="Y"
-
-
+# testsuites
+def xunit_write_tss():
+    print("writing testsuites")
     root.set('tests', '1.0')
     root.set('failures', '6')
     root.set('disabled', '6')
@@ -166,14 +160,18 @@ def xunit_write_view(view_name):   #SubElement(body, 'outline', {'text':group_na
     root.set('name', view_name)
     root.append(ET.Comment('Generated on {0} by Jenkins Collector from https://github.com/daemonna/JenkinsTools'.format(generated_on)))
 
-
-    ts.set('name', '1.0')
+# testsuite
+def xunit_write_ts(view_id):
+    print("writing testsuite {0}".format(view_id))
+    ts.set('name', '{0}'.format(view_id))
     ts.set('status', '6')
     ts.set('time', '6')
     root.append(ts)
 
-
-    tc.set('name', '1.0')
+# testcase
+def xunit_write_tc(job_name):
+    print("writing testcase {0}".format(job_name))
+    tc.set('name', '{0}'.format(job_name))
     tc.set('revision', '6')
     ts.append(tc)
 
@@ -184,16 +182,14 @@ def xunit_write_view(view_name):   #SubElement(body, 'outline', {'text':group_na
         cdata = CDATA("some crappy error output")
         fa.append(cdata)
 
-
-
-
+# finish xml and save it
 def xunit_finish_xml():
     tree = ET.ElementTree(root)
     tree.write("page.xml", xml_declaration=True, encoding='utf-8', method="xml")
 
+def generate_xunit():
+    print("xUnit generator initialized... {0} views and {1} jobs".format(view_array.__len__(), job_array.__len__()))
 
-def xml_write_all():
-    print("writing all to xml")
 
 
 #########################################
@@ -221,8 +217,8 @@ def main(argv):
             usage()
             sys.exit(2)
     list_views()
-    #print(job_view_set)
-    print("we have {0} jobs in qeue".format(job_array.__len__()))
+    generate_xunit()
+
 
 
 
