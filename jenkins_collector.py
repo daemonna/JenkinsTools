@@ -5,7 +5,7 @@ import getopt
 import sys
 import datetime
 import requests
-from requests.auth import HTTPBasicAuth
+from requests.auth import HTTPDigestAuth
 
 
 ################################
@@ -24,7 +24,8 @@ class jenkins_job:
 
 
 # server values
-server_ip = "10.200.10.149"  #localhost as default if no IP specified
+#server_ip = "10.200.10.149"  #localhost as default if no IP specified
+server_ip = "192.168.100.100"  #localhost as default if no IP specified
 server_port = "8080"
 USER="extERNIDuc"
 PASSWORD="3ODiskKC"
@@ -49,7 +50,7 @@ def list_views():
     print("collecting View information from ", server_ip)
 
 
-    restcall = requests.get('http://{0}:{1}/api/xml?xpath=string(count(/hudson/view[*]))&wrapper=hudson'.format(server_ip, server_port))  #first call with timeout
+    restcall = requests.get('http://{0}:{1}/api/xml?xpath=string(count(/hudson/view[*]))&wrapper=hudson'.format(server_ip, server_port), auth=HTTPDigestAuth('extERNIDuc', '3ODiskKC'))  #first call with timeout
     print("REQ: {0}".format(restcall.status_code))
     if restcall.status_code == 403:
         print("Connection error...")
@@ -73,8 +74,10 @@ def list_views():
 # list jobs in view     #
 #########################
 def list_jobs(view_id):
-    restcall = requests.get('http://{0}:{1}/view/{2}/api/xml?xpath=count(/*/job[*])'.format(server_ip, server_port, view_id))
-    jobCount = int(float(restcall.text))
+    print("listing jobs for {0}".format(view_id))
+    restcall = requests.get('http://{0}:{1}/view/{2}/api/xml?xpath=string(count(/*/job[*]))&wrapper=hudson'.format(server_ip, server_port, view_id))
+    root = ET.fromstring(restcall.text)
+    jobCount = int(float(root.text))
 
     i = 1
     while jobCount >= i:
