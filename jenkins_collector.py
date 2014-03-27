@@ -27,8 +27,8 @@ class jenkins_job:
 #server_ip = "10.200.10.149"  #localhost as default if no IP specified
 server_ip = "192.168.100.100"  #localhost as default if no IP specified
 server_port = "8080"
-USER="extERNIDuc"
-PASSWORD="3ODiskKC"
+USER=""
+PASSWORD=""
 
 # job/view values
 viewCount = 0
