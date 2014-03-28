@@ -149,15 +149,15 @@ def _serialize_xml(write, elem, qnames, namespaces):
 ET._serialize_xml = ET._serialize['xml'] = _serialize_xml
 
 
-# testsuites
+# testsuites, only 1 element
 def xunit_write_tss():
     print("writing testsuites")
-    root.set('tests', '1.0')
+    root.set('tests', job_array.__len__())
     root.set('failures', '6')
     root.set('disabled', '6')
     root.set('errors', '6')
     root.set('time', '6')
-    root.set('name', view_name)
+    root.set('name', 'somename')
     root.append(ET.Comment('Generated on {0} by Jenkins Collector from https://github.com/daemonna/JenkinsTools'.format(generated_on)))
 
 # testsuite
@@ -167,6 +167,7 @@ def xunit_write_ts(view_id):
     ts.set('status', '6')
     ts.set('time', '6')
     root.append(ts)
+    print("appending...")
 
 # testcase
 def xunit_write_tc(job_name):
@@ -188,7 +189,13 @@ def xunit_finish_xml():
     tree.write("page.xml", xml_declaration=True, encoding='utf-8', method="xml")
 
 def generate_xunit():
+    x = 0
     print("xUnit generator initialized... {0} views and {1} jobs".format(view_array.__len__(), job_array.__len__()))
+    xunit_write_tss()
+
+    while view_array.__len__() > x:
+        xunit_write_ts(view_array[x])
+        x += 1
 
 
 
