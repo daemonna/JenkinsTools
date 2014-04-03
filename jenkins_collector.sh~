@@ -134,8 +134,8 @@ collect_view_names() {
     local i=1
     while [ $((${VIEWS_COUNT})) -ge ${i} ]
     do
-        wget -q -O ${TEMP_DIR}/view_${i}.xml --auth-no-challenge --http-user=${USER} --http-password=${PASSWORD} "http://${IP}:${PORT}/api/xml?xpath=/hudson/view[${i}]/name"
-        echo $(cat ${TEMP_DIR}/view_${i}.xml | grep '<name' | cut -d '>' -f 2 | cut -d '<' -f 1) >> ${TEMP_DIR}/view_names.xml
+        wget -q -O ${TEMP_DIR}/jobsview_${i}.xml --auth-no-challenge --http-user=${USER} --http-password=${PASSWORD} "http://${IP}:${PORT}/api/xml?xpath=/hudson/view[${i}]/name"
+        echo $(cat ${TEMP_DIR}/jobsview_${i}.xml | grep '<name' | cut -d '>' -f 2 | cut -d '<' -f 1) >> ${TEMP_DIR}/view_names.xml
         i=$(($i+1))
     done  
     
@@ -146,8 +146,6 @@ collect_view_names() {
         VIEW_NAMES[${vindex}]=${jv}
         vindex=$((${vindex}+1))
     done
-    
-    echo -e "GOT $VIEWS_COUNT views"
 
 }
 
@@ -160,15 +158,14 @@ collect_view_names() {
 #   None                  #
 ###########################
 collect_job_count_per_view() {
-
+    local job_name=""
     echo -e "[collect_job_count_per_view] $1"
-    wget -q -O ${TEMP_DIR}/view_$1_jobs.xml --auth-no-challenge --http-user=${USER} --http-password=${PASSWORD} "http://${IP}:${PORT}/view/$1/api/xml"
-    tidy -q -xml ${TEMP_DIR}/view_$1_jobs.xml > ${TEMP_DIR}/view_$1_jobs_tidy.xml
-    cat ${TEMP_DIR}/view_$1_jobs_tidy.xml|grep name > ${TEMP_DIR}/view_$1_jobs_name.xml
+    wget -q -O ${TEMP_DIR}/jobsview_${i}.xml --auth-no-challenge --http-user=${USER} --http-password=${PASSWORD} "http://${IP}:${PORT}/view/$1/api/xml"
+    tidy -q -xml ${TEMP_DIR}/jobsview_${i}.xml > ${TEMP_DIR}/jobsview_${i}_tidy.xml
+    cat ${TEMP_DIR}/jobsview_${i}_tidy.xml|grep name > ${TEMP_DIR}/jobsview_${i}_names.xml
     
-    for n in $(head -n -1 ${TEMP_DIR}/view_$1_jobs_name.xml)
+    for n in $(head -n -1 ${TEMP_DIR}/jobsview_${i}_names.xml)
     do        
-        echo "collect_job_info $n"
         collect_job_info $(echo $n | grep '<name' | cut -d '>' -f 2 | cut -d '<' -f 1) $2
     done
 }
@@ -281,8 +278,7 @@ write_xml_testsuite() {
 #   None                      #
 ###############################
 write_xml_testcase() {
-    echo -e "            <testcase name=\"$1\" status=\"run\" time=\"$3\" classname=\"$4\"/>" 
-    echo -e "            <testcase name=\"$1\" status=\"run\" time=\"$3\" classname=\"$4\"/>" >> ${REPORT_FILE}
+    echo -e "            <testcase name=\"$1\" status=\"$2\" time=\"$3\" classname=\"$4\"/>" >> ${REPORT_FILE}
 }
     
     
@@ -295,7 +291,6 @@ write_xml_testcase() {
 #   None                      #
 ###############################
 write_xml_testcase_failure() {
-    echo -e "[write_xml_testcase_failure]"
     if [[ "${RESULT}" == "FAILURE" ]];then
         echo -e "        <failure message=\"http://${IP}:${PORT}/job/$1/$2/console\" type=\"\">" >> ${OUTF}
         echo -e "          <![CDATA[" >> ${OUTF}
@@ -318,30 +313,18 @@ write_xml_tail() {
     echo -e "</testsuites>" >> ${REPORT_FILE}
 }
 
-###############################
-# generate xUnit report       #
-# Arguments:                  #
-#   None                      #
-# Returns:                    #
-#   None                      #
-###############################
-generate_full_xml() {
 
+generate_full_xml() {
+    f=0
     echo -e "[XML GENERATOR] combining XML elements....."
     write_xml_head
     write_xml_testsuites
     
-
-    for jv in $(cat ${TEMP_DIR}/view_names.xml)
+    #for views
+    while [ $f -le $((${VIEWS_COUNT})) ]
     do
-        write_xml_testsuite ${jv} ${TC_PER_VIEW[${jv}]} ${FAILURES_PER_VIEW[${jv}]}
-        
-       
-        for n in $(head -n -1 ${TEMP_DIR}/view_${jv}_jobs_name.xml)
-        do        
-            jname=$(echo $n | grep '<name' | cut -d '>' -f 2 | cut -d '<' -f 1)
-            write_xml_testcase ${jname}
-        done
+        write_xml_testsuite ${VIEW_NAMES[${f}]} ${TC_PER_VIEW[${f}]} ${FAILURES_PER_VIEW[${f}]}
+        f=$((${f}+1))
     done
     
     write_xml_tail
@@ -483,7 +466,7 @@ collect_view_names
 recount_failures
 generate_full_xml
 
-#clean_tmp
+clean_tmp
 
 ##############################
 # END OF MAIN                #
