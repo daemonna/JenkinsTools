@@ -299,7 +299,6 @@ backup_history_preparation
 
 for i in "$@"
 do
-case $i in
 all) backup_history_preparation
     print_values
     install_prereqs
@@ -328,8 +327,7 @@ backup_jobs) backup_jobs
 restore_jobs) restore_jobs $2
   ;;
 *) print_usage  
-   exit 1
-   ;;
+        exit 1
 esac
 done
 
