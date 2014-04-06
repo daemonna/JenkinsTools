@@ -48,30 +48,72 @@ NOW=$(date +"%s-%d-%m-%Y")
 
 
 
-############################
-#install required software #
-############################ 
-install_prereqs() {
-#remove conflicting jenkins-common
-  apt-get update
-  echo "removing old conflicting packages"
-  apt-get remove jenkins jenkins-common
-  apt-get purge jenkins jenkins-common
 
-#install basic usefull software    
-  echo "installing prerequisities"
-  apt-get update
-  apt-get upgrade -y
-  apt-get install vim nmap tcpdump mc locate p7zip nginx ssh python-software-properties subversion -y
+#################################################################################
+#                                                                               #
+# FUNCTIONS                                                                     #
+#################################################################################
+
+
+#########################################
+# find out type of linux distro of HOST #
+#########################################
+get_distro() {
   
-#delete OpenJDK and install Oracle JDK for better compatibility
-  apt-get purge openjdk-*
-  rm -rf /var/cache/jenkins
-  add-apt-repository ppa:webupd8team/java
-  apt-get update
-  apt-get install oracle-java7-installer -y
-  apt-get install oracle-java7-set-default -y
+  echo -e "checking for right Python version.."
+  if [ ${HOST_PYTHON_VERSION} -eq 0 ]; then
+    echo -e "${RED}[ERROR]${NONE} we require python version 2.x"
+    exit
+  else 
+    echo -e "${GREEN}[OK]${NONE} python version is 2.x\n"
+  fi
+
+  if [ -f /etc/redhat-release ] ; then
+    HOST_DISTRO='redhat'
+  elif [ -f /etc/SuSE-release ] ; then
+    HOST_DISTRO="suse"
+  elif [ -f /etc/debian_version ] ; then
+    HOST_DISTRO="debian" # including Ubuntu!
+  fi
 }
+
+
+
+################################################
+# install required software for current distro #
+################################################
+install_essentials() {
+
+  case "${HOST_DISTRO}" in
+  redhat) yum install jenkins
+    ;;
+  suse) zypper install jenkins
+    ;;
+  debian) apt-get update
+    echo "removing old conflicting packages"  #only needed for 12.04
+    apt-get remove jenkins jenkins-common
+    apt-get purge jenkins jenkins-common
+
+    #install basic usefull software    
+    echo "installing prerequisities"
+    apt-get update
+    apt-get upgrade -y
+    apt-get install vim nmap tcpdump mc locate p7zip nginx ssh python-software-properties subversion -y
+  
+    #delete OpenJDK and install Oracle JDK for better compatibility
+    apt-get purge openjdk-*
+    rm -rf /var/cache/jenkins
+    add-apt-repository ppa:webupd8team/java
+    apt-get update
+    apt-get install oracle-java7-installer -y
+    apt-get install oracle-java7-set-default -y
+    ;;
+  *) echo "DISTRO error" 
+    exit 1
+    ;;
+  esac
+}
+
 
 
 ################################################

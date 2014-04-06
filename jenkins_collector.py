@@ -13,6 +13,7 @@ from requests.auth import HTTPDigestAuth
 ################################
 generated_on = str(datetime.datetime.now())
 
+<<<<<<< HEAD
 
 class jenkins_job(object):
     """__init__() functions as the class constructor"""
@@ -39,15 +40,33 @@ class jenkins_view(object):
         self.idx = idx
         self.status = status
         self.time = time
+=======
+class jenkins_job:
+    name = ""
+    run = ""
+    url = ""
+    duration = ""
+    result = ""
+    failure = ""
+    view = ""
+    view_idx = ""
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 
 
 # server values
 #server_ip = "10.200.10.149"  #localhost as default if no IP specified
+<<<<<<< HEAD
 #server_ip = "192.168.100.100"  #localhost as default if no IP specified
 server_ip = "localhost"
 server_port = "8080"
 USER = "fakeuser"
 PASSWORD = "fake123"
+=======
+server_ip = "192.168.100.100"  #localhost as default if no IP specified
+server_port = "8080"
+USER=""
+PASSWORD=""
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 
 # job/view values
 job_array = []
@@ -55,6 +74,11 @@ view_array = []
 view_from_cli = "n/a"
 
 
+# XML elements for xUnit
+root = ET.Element('testsuites')
+ts = ET.Element('testsuite')
+tc = ET.Element('testcase')
+fa = ET.Element('failure')
 
 # XML elements for xUnit
 root = ET.Element('testsuites')
@@ -69,9 +93,14 @@ fa = ET.Element('failure')
 def list_views():
     print("collecting View information from ", server_ip)
 
+<<<<<<< HEAD
     restcall = requests.get(
         'http://{0}:{1}/api/xml?xpath=string(count(/hudson/view[*]))&wrapper=hudson'.format(server_ip, server_port),
         auth=HTTPDigestAuth(USER, PASSWORD))  #first call with timeout
+=======
+
+    restcall = requests.get('http://{0}:{1}/api/xml?xpath=string(count(/hudson/view[*]))&wrapper=hudson'.format(server_ip, server_port), auth=HTTPDigestAuth('extERNIDuc', '3ODiskKC'))  #first call with timeout
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
     print("REQ: {0}".format(restcall.status_code))
     if restcall.status_code == 403:
         print("Connection error...")
@@ -86,18 +115,25 @@ def list_views():
         restcall = requests.get('http://{0}:{1}/api/xml?xpath=/hudson/view[{2}]/name'.format(server_ip, server_port, i))
         root = ET.fromstring(restcall.text)
         print("[view num {0} is {1} ]".format(i, root.text))
+<<<<<<< HEAD
         view = jenkins_view()
         view.name = root.text
         view.idx = i
         view_array.append(view)
+=======
+        view_array.append(root.text)
+        list_jobs(root.text, i)
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
         i += 1
 
     print("View listing FINISHED")
 
 
+
 #########################
 # list jobs in view     #
 #########################
+<<<<<<< HEAD
 def list_jobs(idx):
     print("[list_jobs] {0}".format(idx))
     print('calling http://{0}:{1}/view/{2}/api/xml?xpath=string(count(/*/job[*]))&wrapper=hudson'.format(server_ip, server_port,
@@ -137,6 +173,33 @@ def list_jobs(idx):
             #print("{0} added to {1}".format(job_array[job_array.__len__() - 1].name, job_array[job_array.__len__() - 1].view))
         else:
             print("{0} already in ALL".format(view_array[idx].name))
+=======
+def list_jobs(view_id, view_idx):
+    print("listing jobs for {0}".format(view_id))
+    restcall = requests.get('http://{0}:{1}/view/{2}/api/xml?xpath=string(count(/*/job[*]))&wrapper=hudson'.format(server_ip, server_port, view_id))
+    root = ET.fromstring(restcall.text)
+    jobCount = int(float(root.text))
+
+    i = 1
+    while jobCount >= i:
+        restcall = requests.get('http://{0}:{1}/view/{2}/api/xml?xpath=/*/job[{3}]/name'.format(server_ip, server_port, view_id, i))
+        root = ET.fromstring(restcall.text)
+        print("             [ {0} ]".format(root.text))
+
+        newjob = jenkins_job()
+        if view_id != "All":
+            newjob.view = view_id
+            newjob.view_idx = view_idx
+            print("               View_idx: {0}".format(view_idx))
+            newjob.name = root.text
+            newjob.result = get_job_result(newjob.name)
+            newjob.duration = get_job_duration(newjob.name)
+            newjob.run = get_job_run(newjob.name)
+            newjob.url = get_job_url(newjob.name)
+            job_array.append(newjob)
+        else:
+            print("skiping coz belongs to ALL")
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
         i += 1
 
 
@@ -144,6 +207,7 @@ def list_jobs(idx):
 # get details of specific job #
 ###############################
 def get_job_run(jobname):
+<<<<<<< HEAD
     #print("[get_job_run] with {0}".format(jobname))
     restcall = requests.get(
         'http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/number[1]'.format(server_ip, server_port,
@@ -179,6 +243,29 @@ def get_job_url(jobname):
         'http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/url[1]'.format(server_ip, server_port, jobname))
     root = ET.fromstring(restcall.text)
     #print("               URL:{0}".format(root.text))
+=======
+    restcall = requests.get('http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/number[1]'.format(server_ip, server_port, jobname))
+    root = ET.fromstring(restcall.text)
+    print("               RUN:{0}".format(root.text))
+    return root.text
+
+def get_job_duration(jobname):
+    restcall = requests.get('http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/duration[1]'.format(server_ip, server_port, jobname))
+    root = ET.fromstring(restcall.text)
+    print("               DURATION:{0}".format(root.text))
+    return root.text
+
+def get_job_result(jobname):
+    restcall = requests.get('http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/result[1]'.format(server_ip, server_port, jobname))
+    root = ET.fromstring(restcall.text)
+    print("               RESULT:{0}".format(root.text))
+    return root.text
+
+def get_job_url(jobname):
+    restcall = requests.get('http://{0}:{1}/job/{2}/lastBuild/api/xml?xpath=/freeStyleBuild/url[1]'.format(server_ip, server_port, jobname))
+    root = ET.fromstring(restcall.text)
+    print("               URL:{0}".format(root.text))
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
     return root.text
 
 
@@ -191,29 +278,42 @@ def CDATA(text=None):
     element.text = text
     return element
 
+<<<<<<< HEAD
 
 ET._original_serialize_xml = ET._serialize_xml
 
 
+=======
+ET._original_serialize_xml = ET._serialize_xml
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 def _serialize_xml(write, elem, qnames, namespaces):
     if elem.tag == '![CDATA[':
         write("\n<%s%s]]>\n" % (elem.tag, elem.text))
         return
     return ET._original_serialize_xml(write, elem, qnames, namespaces)
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 ET._serialize_xml = ET._serialize['xml'] = _serialize_xml
 
 
 # testsuites, only 1 element
 def xunit_write_tss():
+<<<<<<< HEAD
     #print("writing testsuites")
     root.set('tests', '{0}'.format(job_array.__len__()))
+=======
+    print("writing testsuites")
+    root.set('tests', job_array.__len__())
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
     root.set('failures', '6')
     root.set('disabled', '6')
     root.set('errors', '6')
     root.set('time', '6')
     root.set('name', 'somename')
+<<<<<<< HEAD
     root.append(ET.Comment(
         'Generated on {0} by Jenkins Collector from https://github.com/daemonna/JenkinsTools'.format(generated_on)))
     ET.dump(root)
@@ -256,12 +356,39 @@ def xunit_write_tc(vidx):
         #cdata = CDATA("some crappy error output")
         #fa.append(cdata)
 
+=======
+    root.append(ET.Comment('Generated on {0} by Jenkins Collector from https://github.com/daemonna/JenkinsTools'.format(generated_on)))
+
+# testsuite
+def xunit_write_ts(view_id):
+    print("writing testsuite {0}".format(view_id))
+    ts.set('name', '{0}'.format(view_id))
+    ts.set('status', '6')
+    ts.set('time', '6')
+    root.append(ts)
+    print("appending...")
+
+# testcase
+def xunit_write_tc(job_name):
+    print("writing testcase {0}".format(job_name))
+    tc.set('name', '{0}'.format(job_name))
+    tc.set('revision', '6')
+    ts.append(tc)
+
+    if FAIL == 'Y':
+        print('writing failure')
+        fa.set('message', '1.0')
+        ts.append(fa)
+        cdata = CDATA("some crappy error output")
+        fa.append(cdata)
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 
 # finish xml and save it
 def xunit_finish_xml():
     tree = ET.ElementTree(root)
     tree.write("page.xml", xml_declaration=True, encoding='utf-8', method="xml")
 
+<<<<<<< HEAD
 
 def generate_xunit():
     x = 0
@@ -278,17 +405,38 @@ def generate_xunit():
         x += 1
 
 
+=======
+def generate_xunit():
+    x = 0
+    print("xUnit generator initialized... {0} views and {1} jobs".format(view_array.__len__(), job_array.__len__()))
+    xunit_write_tss()
+
+    while view_array.__len__() > x:
+        xunit_write_ts(view_array[x])
+        x += 1
+
+
+
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 #########################################
 #                                       #
 # MAIN                                  #
 #########################################
 def main(argv):
+<<<<<<< HEAD
     vl = 0
     try:
         opts, args = getopt.getopt(argv, 'h:sip:sport:vw', ['help', 'server-ip', 'server-port', 'view'])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
+=======
+    try:
+        opts, args = getopt.getopt(argv, 'h:sip:sport:vw', ['help', 'server-ip', 'server-port', 'view'])
+    except getopt.GetoptError:
+            usage()
+            sys.exit(2)
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
 
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -304,6 +452,7 @@ def main(argv):
             usage()
             sys.exit(2)
     list_views()
+<<<<<<< HEAD
     while view_array.__len__() > vl:
         print("checking jobs in {0}:{1}".format(view_array[vl].idx, view_array[vl].name))
         list_jobs(view_array[vl].idx)
@@ -313,3 +462,12 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])  # [1:] slices off the first argument
+=======
+    generate_xunit()
+
+
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:]) # [1:] slices off the first argument
+>>>>>>> 60bff4844245ffda13526320edc3dc5f73a673f2
