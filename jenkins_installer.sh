@@ -255,8 +255,9 @@ print_values() {
 backup_history_preparation
 
 
-case "$1" in
-all)backup_history_preparation
+for i in "$@"
+do
+all) backup_history_preparation
     print_values
     install_prereqs
     install_jenkins
@@ -286,6 +287,7 @@ restore_jobs) restore_jobs $2
 *) print_usage  
         exit 1
 esac
+done
 
 exit $?
 
