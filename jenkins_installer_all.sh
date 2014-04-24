@@ -64,6 +64,11 @@ NOW=$(date +"%s-%d-%m-%Y")
 # DISTRO RELATED FUNCTIONS                                                                         #
 ####################################################################################################
 
+
+if [[ ! -d ${BACKUP_DIR} ]];then
+    mkdir ${BACKUP_DIR}
+fi
+
 ##############################
 # determine DISTRO           #
 # Arguments:                 #
@@ -159,7 +164,7 @@ list_backups() {
     echo "-----------------------------------------------------"
     echo -e "-${YELLOW} AVAILABLE BACKUP FILES:      ${NONE}  -"
     echo "-----------------------------------------------------"
-    ls ${BACKUP_DIR} |grep .backup
+    ls ${BACKUP_DIR} |grep backup
     echo "-----------------------------------------------------"
 }
 
@@ -170,13 +175,19 @@ list_backups() {
 # Return:                    #
 #   None                     #
 ##############################
-backup() {
+backup_current() {
     echo "-BACKUP START----------------------------------------"
     
-    cp $JENKINS_HOME/config.xml ${BACKUP_DIR}/${NOW}_config.xml
-    tar zcvf ${BACKUP_DIR}/${NOW}_plugins.tar.gz ${JENKINS_HOME}/plugins/
-    #tar -zcvf /jenkins_${NOW}_full-backup.tgz ${JENKINS_HOME} --exclude=${JENKINS_HOME}/jobs/*/workspace
-
+    #cp $JENKINS_HOME/config.xml ${BACKUP_DIR}/${NOW}_config.xml
+    #tar zcvf ${BACKUP_DIR}/${NOW}_plugins.tar.gz ${JENKINS_HOME}/plugins/
+    
+    for f in $(ls ${JENKINS_HOME}/jobs)
+    do
+        echo -e "excluding workspace from ${f}"  
+        excludes="${excludes} --exclude=${JENKINS_HOME}/jobs/${f}/workspace"   
+    done
+    echo -e "tar -zcf /jenkins_${NOW}_full-backup.tgz ${JENKINS_HOME} ${excludes}"
+    tar -zcf ${BACKUP_DIR}/jenkins_${NOW}_full-backup.tgz ${JENKINS_HOME} ${excludes}
 }
 
 ##############################
@@ -188,7 +199,25 @@ backup() {
 ##############################
 restore() {
     echo "-----------------------------------------------------"
+    if [[ -z $1 ]];then
+        echo -e "restore not specified.. "
+        list_backups
+        exit 1
+    else
+        echo -e "RESTORING BACKUP ${BACKUP_DIR}/$1"
+        echo -e "tar -xf ${BACKUP_DIR}/$1"
+        tar -xf ${BACKUP_DIR}/$1
+    fi
+}
 
+list_jobs() {
+    echo -e "--------------------------------------------------"
+    echo -e "JOBS:"
+    for f in $(ls ${JENKINS_HOME}/jobs)
+    do
+        echo -e "${f}"
+    done
+    echo -e "--------------------------------------------------"
 }
 
 
@@ -214,10 +243,14 @@ set_auto_backup() {
     echo -e "enter new value [0 0 * * * *]"
     read crontime
     if [[ -z ${crontime} ]];then
-        crontime="0 0 * * *"
+        crontime="0 0 1 * *"
+        echo -e "no value specified, setting cron to do monthly backups"
+        echo "${crontime} tar -zcvf ${BACKUP_DIR}/jenkins_${NOW}_full-backup.tgz ${JENKINS_HOME}" >> /var/spool/cron/crontabs/root
+    else 
+        echo "${crontime} tar -zcvf ${BACKUP_DIR}/jenkins_${NOW}_full-backup.tgz ${JENKINS_HOME}" >> /var/spool/cron/crontabs/root
     fi
-    echo "${crontime} tar -zcvf /jenkins_${NOW}_full-backup.tgz / --exclude=${JENKINS_HOME}/workspace" >> /var/spool/cron/crontabs/root
-    echo "daily backup set in Cron.."
+    
+    echo "monthly backup set in Cron.."
 }
  
 
@@ -244,7 +277,10 @@ print_usage() {
 
 get_distro
 print_banner
-prepare_essentials
+
+if [[ $# -lt 1 ]];then
+    print_usage
+fi
 
 for i in "$@"
 do
@@ -260,6 +296,8 @@ case $i in
     --backup) backup_current
         ;;
     --restore) restore
+        ;;
+    --list-jobs) list_jobs
         ;;
     *) echo "invalid option ${i}!!!" 
         print_usage
